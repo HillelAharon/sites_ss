@@ -1,11 +1,10 @@
 
-let 
-container, ssconsole, loadSitesButton, updateButton, hot, deleteButton, loadIdButton, downloadButton, clearButton, exportPlugin1,
+let container, ssconsole, loadSitesButton, updateButton, hot, deleteButton, loadIdButton, downloadButton, clearButton, exportPlugin1,
 displayedData = [], onChangeAttrArr = [], consoleOn = false;
 
 const ssAttrToStr = ['_id','name','address','type','serialNumber','phone','qrCode'];
 
-window.onload = () => {
+function initApp() {
   container = document.querySelector('#root');
   ssConsole = document.getElementById('console');
   loadSitesButton = document.getElementById('load');
@@ -40,7 +39,7 @@ window.onload = () => {
       selectionMode: 'multiple',
       minSpareRows: 1,
       afterChange: (changes) => {
-        if(changes){
+        if (changes) {
           changes.forEach(([row, prop, oldValue, newValue]) => {
             const onChangeId = prop === 'id' ?  oldValue : hot.getData()[row][0];
             addToOnChangeArr(onChangeId,prop, oldValue, newValue);
@@ -51,26 +50,25 @@ window.onload = () => {
 
   exportPlugin1 = hot.getPlugin('exportFile');
 
-  Handsontable.dom.addEvent(loadSitesButton, 'click', () => {
+  loadSitesButton.addEventListener('click', () => {
     fetch('/sites', {
       method:'GET',
       credentials: 'include'
     })
     .then((res) => {
-      if (!res.ok) {
+      if (!res.ok) 
           throw res;
-      }
       return res.json();
     })
     .then( sites => {
       hot.loadData(sites);
       displayedData= copy(sites);
       displayedData.pop();
-      consoleMsg('data loaded','msg');
+      consoleMsg('data loaded', 'msg');
     });
   }); 
       
-  Handsontable.dom.addEvent(updateButton, 'click', () => {
+  updateButton.addEventListener('click', () => {
     swalConfirm('You are about to change the database')
     .then((willUpdate) => {
       if (willUpdate) {
@@ -80,14 +78,12 @@ window.onload = () => {
           credentials: 'include'
         })
         .then((res) => {
-          if (!res.ok) {
+          if (!res.ok)
             throw res;
-          }
           return res.json();
         })
-        .then(idsNotFound => {
-          onChangeAttrArr = [];
-          idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${idsNotFound} not found`,'err');
+        .then(respData => {
+          console.log('do something with respData');
         });
       } else {
         swal("data update aborted");
@@ -103,15 +99,14 @@ window.onload = () => {
       swalConfirm(getOnDeleteWarning(sitesOnDelete))
       .then((willDelete) => {
         if(willDelete){
-          fetch('/sites/update', {
+          fetch('/sites/multi_update', {
             method: 'PUT',
             body: JSON.stringify(sitesOnDelete),
             credentials: 'include'
           })
           .then((res) => {
-            if (!res.ok) {
+            if (!res.ok)
               throw res;
-            }
             return res.json();
           })
           .then(idsNotFound => {
@@ -129,21 +124,20 @@ window.onload = () => {
 
   loadIdButton.addEventListener('click', () => {
     const sitesIdToLoad = difference(hot.getDataAtCol(0));
-    const queryStr = sitesIdToQueryStr(sitesIdToLoad);
-
+    
     if(!validateIdInitBeforeLoad()){
       consoleMsg('please insert id first','help');
       return;
     }
-    if(sitesIdToLoad.length > 0){
+    if( sitesIdToLoad.length > 0) {
+      const queryStr = `/sites?ids=[${sitesIdToLoad}]`;
       fetch(queryStr, {
         method: 'GET',
         credentials: 'include'
       })
       .then((res) => {
-        if (!res.ok) {
+        if (!res.ok)
           throw res;
-        }
         return res.json();
       })
       .then(data => {
@@ -203,8 +197,8 @@ function consoleMsg(msg,type){
 }
 
 function addToOnChangeArr(_id, _attr, oldVal, newVal){
-  if(_attr !== '_id' && !(_attr === 'name' && newVal === '')){
-    const i = onChangeAttrArr.findIndex(obj => obj.id === _id);   
+  if(_attr !== '_id' && newVal !== '' && !isNaN(_id)){
+    const i = onChangeAttrArr.findIndex(obj => obj.id === parseInt(_id));   
     if( i !== -1 ){
       onChangeAttrArr[i].attr[_attr] = newVal;
     } else {
@@ -287,4 +281,7 @@ function swalConfirm(txt){
 
 function validateIdInitBeforeLoad(){ return hot.getData().filter(site => site[0] !== null).length !== 0; }
 
-function sitesIdToQueryStr(sitesIdToLoad) { return '/sites/id?'+ sitesIdToLoad.map(id => id.toString()).join('&'); }
+
+window.onload = () => {
+  initApp();
+}
