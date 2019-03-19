@@ -27,7 +27,7 @@ function swalConfirm(txt){
   return swal({
     title: "Are you sure?",
     text: txt,
-    icon: "warning",
+    //icon: "warning",
     buttons: true,
     dangerMode: true,
   });

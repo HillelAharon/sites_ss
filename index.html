@@ -11,15 +11,25 @@
                   <button id = "delete" class = "button">delete</button>
                   <button id = "load" class = "button">load sites</button>
                   <button id = "load-id" class = "button">load by id</button>
+                  <button id = "filter-columns" class = "button">show filters</button>
                   <button id = "clear" class = "button">clear</button>
-                  <button id = "filter" class = "button">filter</button>
                   <button id = "download-csv" class = "button">download csv</button>
+            </div>
+            <div id = "filter-container" class = "hidden">
+                  <div id="columns">
+                        <label><input type="checkbox" class = "filter-item" name="name" value="1" checked/>name</label>
+                        <label><input type="checkbox" class = "filter-item" name="address" value="2" checked/>address</label>
+                        <label><input type="checkbox" class = "filter-item" name="types" value="3" checked/>type</label>
+                        <label><input type="checkbox" class = "filter-item" name="serial-number" value="4" checked/>serial number</label>
+                        <label><input type="checkbox" class = "filter-item" name="phone" value="5" checked/>phone</label>
+                        <label><input type="checkbox" class = "filter-item" name="qrCode" value="6" checked/>qrCode</label>
+                  </div>
             </div>
             <div id = "console-container">
                   <div id = "console-label">console </div>
                   <div id = "console"></div>
             </div>
-            <div id="root"></div>
+            <div id="root"></div>          
         </div>
         
         <script type="module" src="app.js"></script>

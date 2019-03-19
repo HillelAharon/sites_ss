@@ -8,7 +8,7 @@ body{
     display: flex;
     flex-direction: column;
     margin: auto;
-    width: 50%;
+    width: 60%;
 }
 #root {
     display: flex;
@@ -21,7 +21,6 @@ body{
     display: flex;       
 }
 #console-container {
-    height: 5vh;
     display: flex;
     border: 2px solid rgb(168, 168, 172);
     background-color: rgb(214, 209, 209);
@@ -74,7 +73,7 @@ textarea{
 }
 
 .swal-button--confirm.swal-button--danger{
-    background-color: rgb(167, 48, 61);
+    background-color: rgb(196, 116, 126);
     size: 150%;
 } 
 
@@ -83,13 +82,18 @@ textarea{
     background-color: rgb(72, 67, 172);
 }
 
-/* 
-.swal-icon--warning > *{
-    color: rgb(179, 58, 72);
-    /* background-color: rgb(179, 58, 72); 
+#filter-container{
+    display: none;
+    justify-content: space-around;
+    border: 2px solid rgb(168, 168, 172);
+    background-color: rgb(214, 209, 209);
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
 }
 
-.swal-icon{
-    color: rgb(179, 58, 72);
-    background-color: rgb(179, 58, 72);
-} */
+.filter-item{
+    flex-grow: 1;
+}
+
+#download-csv {
+    color: slateblue;
+}

@@ -20,6 +20,13 @@ function initHot(addToOnChangeArr) {
       outsideClickDeselects: false,
       selectionMode: 'multiple',
       minSpareRows: 1,
+      contextMenu: true,
+      hiddenColumns: true,
+      showColumns: true,
+      undo: true,
+      hiddenColumns: {
+        indicators: true,
+      },
       afterChange: (changes) => { addToOnChangeArr(changes); }
   });
   hot.updateSettings({

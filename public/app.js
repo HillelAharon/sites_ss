@@ -1,20 +1,26 @@
 import initActions from './action.js';
 import initHot from './hot.js';
 import initConsole from './console.js';
-import { getDifference, getOnDeleteWarning, copy, swalConfirm, validateIdInitBeforeLoad, isTableEmpty } from './util.js'
+import { getDifference, getOnDeleteWarning, copy, swalConfirm, validateIdInitBeforeLoad, isTableEmpty } from './util.js';
+//import { displayFilter, initCheckBox } from './filterCheckbox.js';
 
 const HOT_ATTR_TO_STR = ['_id','name','address','type','serialNumber','phone','qrCode'];
-  
+
 let displayedData = [], onChangeAttrArr = [], hot, consoleOn = false, consoleMsg;
 
 window.onload = () => {
-  const actionFuncs = [updateSites, deleteSites, loadAllSites, loadSitesById, clearSites, downloadCsv];
+  const actionFuncs = [updateSites, deleteSites, loadAllSites, loadSitesById, clearSites, downloadCsv, displayFilter];
   initActions(actionFuncs);
   hot = initHot(addToOnChangeArr);
   consoleMsg = initConsole(consoleOn);
+  initCheckBox(); 
 }
 
 function updateSites(){
+  if(onChangeAttrArr.length === 0){
+    consoleMsg('nothing to update', 'help');
+    return;
+  }
   swalConfirm('You are about to change the database')
   .then((willUpdate) => {
     if (willUpdate) {
@@ -29,7 +35,7 @@ function updateSites(){
         return res.json();
       })
       .then(data => {// expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
-        data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${data.idsNotFound} not found`,'err');
+        data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`Ids ${data.idsNotFound} not found`,'err');
       });
     } else {
       swal("data update aborted");
@@ -56,7 +62,7 @@ function deleteSites(){
           return res.json();
         })
         .then(data => { // expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
-          data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${data.idsNotFound} not found`,'err');
+          data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`Ids ${data.idsNotFound} not found`,'err');
         });
       } else {
         swal("deletion aborted");
@@ -69,6 +75,7 @@ function deleteSites(){
 }
 
 function loadAllSites(){
+ // filterColumns();
   fetch('/sites', {
     method:'GET',
     credentials: 'include'
@@ -105,7 +112,7 @@ function loadSitesById(){
       });                               
     } else {
       restoreFromDisplayedData();
-      consoleMsg(`error: all searched ids apear on table`,'err');
+      consoleMsg(`all searched ids apear on table`,'err');
     }
   } 
 }
@@ -138,12 +145,13 @@ function downloadCsv(){
   });
 }
 
-function addToOnChangeArr(changes){
+function addToOnChangeArr(changes) {
   if (changes) {
+    let consoleErr = false;
     changes.forEach(([row, prop, oldVal, newVal]) => {
       const onChangeSiteId = parseInt(prop === 'id' ?  oldVal : hot.getData()[row][0]);
       
-      if(prop !== '_id'){ 
+      if(prop !== '_id' && !(oldVal !== '' && newVal === '')){ 
         if (newVal !== '' && !isNaN(onChangeSiteId)) {
           const i = onChangeAttrArr.findIndex(obj => obj.id === onChangeSiteId);   
           
@@ -155,17 +163,20 @@ function addToOnChangeArr(changes){
             onChangeAttrArr.push({ id: onChangeSiteId , attr : attrOnChange });
           }
         }
-      } else if (newVal === ''){
-        restoreFromDisplayedData();
-      }  
+      } else if (prop === '_id' && newVal === ''){
+        hot.setDataAtCell(row, 0, oldVal);
+      }
+      if (oldVal !== '' && newVal === ''){
+        consoleErr = true;
+      }
     });
+    if(consoleErr) consoleMsg('attribute deleted manually will not be updated', 'err');
   }
 }
 
 function getOnDeleteFromHot(){
   const selected = hot.getSelected();
   let onDelete = [];
-  
   for (let index = 0; index < selected.length; index++) {
     const item = selected[index];
     const startRow = Math.min(item[0], item[2]);
@@ -189,7 +200,7 @@ function getOnDeleteFromHot(){
               onDelete.push({id: rowId , attr : attrOnDelete });
             }
           } else {
-            consoleMsg('error: `Name` is required if added','err');
+            consoleMsg('`Name` is required if added','err');
           }
         } 
       }
@@ -210,64 +221,43 @@ function pushNewDataToHotAndConsole(sitesArr, idsNotFound) {
   displayedData.push(...sitesArr);
   hot.loadData(copy(displayedData));
   if( idsNotFound.length === 0 ) consoleMsg('data updated','msg');
-  else if( idsNotFound.length === 1 ) consoleMsg(`error: site id ${idsNotFound} not found`,'err');
-  else consoleMsg( `error: sites ids' ${idsNotFound} not found`,'err' );
+  else if( idsNotFound.length === 1 ) consoleMsg(`site id ${idsNotFound} not found`,'err');
+  else consoleMsg( `sites ids' ${idsNotFound} not found`,'err' );
 }
 
 function restoreFromDisplayedData(){ 
   hot.loadData(copy(displayedData)); 
 }
 
-function filterColumns(){
-  let plugin = hot.getPlugin('hiddenColumns');
-  //show === true ? plugin.showColumn(col) : plugin.hideColumn(col);
-  plugin.hideColumn(5);
+
+//--->checkbox
+
+function initCheckBox() {
+  const el = document.getElementById('columns'), 
+    columns = el.getElementsByTagName('input');
+  
+  for (let i = 0 ; i < columns.length ; i++) 
+      columns[i].addEventListener('click', toggleColumn);
 }
 
-//-------------------------------util
+function displayFilter() {
+  const filtersContainer = document.getElementById("filter-container");
+  const filterButton = document.getElementById('filter-columns');
+ 
+  if(filtersContainer.classList.contains('hidden')){
+    filtersContainer.style.display = 'flex';
+    filtersContainer.classList.remove('hidden');
+    filterButton.innerHTML = 'hide filters';
+  } else {
+    filtersContainer.style.display = 'none';
+    filtersContainer.classList.add('hidden');
+    filterButton.innerHTML = 'show filters';
+  }
+}
 
-// function getDifference(arr1,arr2) {
-//   let difference = new Set(arr1);
-//   for (elem of arr2) 
-//       difference.delete(elem);
-//   return copy(Array.from(difference));
-// }
-
-// function getOnDeleteWarning(onDeleteArr){
-//   let confirmStr = 'you are about to delete:\n';
-//   for(let i = 0; i < onDeleteArr.length; i++)
-//     confirmStr = confirmStr.concat(`site id: ${onDeleteArr[i].id}-> attributes: ${Object.keys(onDeleteArr[i].attr).map(a => a + ' ')}\n`); 
-//   return confirmStr;
-// }
-
-// function copy(o) {
-//     var output, v, key;
-//     output = Array.isArray(o) ? [] : {};
-//     for (key in o) {
-//         v = o[key];
-//         output[key] = (typeof v === "object") ? copy(v) : v;
-//     }
-//     return output;
-// }
-
-// function swalConfirm(txt){
-//   return swal({
-//     title: "Are you sure?",
-//     text: txt,
-//     icon: "warning",
-//     buttons: true,
-//     dangerMode: true,
-//   });
-// }
-
-// function validateIdInitBeforeLoad(table) {
-//   if (table.filter(site => site[0] !== null).length > 0) {
-//     return true;  
-//   }
-//   consoleMsg('please insert id first','help');
-//   return false;
-// }
-
-// function isTableEmpty(table) { 
-//   return table.length === 1 && table[0].filter(attr => attr !== null).length === 0; 
-// }
+function toggleColumn(){
+  const columnIndex = parseInt(this.value);
+  const hiddenColumnsPlugin = hot.getPlugin('hiddenColumns');
+  this.checked ? hiddenColumnsPlugin.showColumn(columnIndex) : hiddenColumnsPlugin.hideColumn(columnIndex);
+  hot.render();
+}
