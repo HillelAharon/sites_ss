@@ -24,7 +24,7 @@ module.exports = (db) => {
 
      // TODO: query by cityId
     if (method === 'GET' && pathname.match(/sites/)) {
-      if( pathname.match(/ids/) ) {
+      if( req.url.match(/ids/) ) {
         let respData = {},
         idsOnLoad =  req.url.split('[')[1]
                             .split(']')[0]
@@ -33,8 +33,10 @@ module.exports = (db) => {
 
         db.collection("sites").find( { _id: { $in: idsOnLoad } } ).toArray((err, sites) => {
           if (err) throw err;
-          respData.sites = sites;
+          respData.sites = sites; 
+          respData.idsFound = idsOnLoad.filter(id => sites.map(site=>site._id).includes(id));
           respData.idsNotFound = idsOnLoad.filter(id => !sites.map(site=>site._id).includes(id));
+          
           res.writeHead(200, {'Content-Type': 'application/json'});	
           res.write(JSON.stringify(respData));
           res.end();

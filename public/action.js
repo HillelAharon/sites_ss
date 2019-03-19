@@ -1,4 +1,4 @@
-module.exports.initActions = ([onUpdateClick, onDeleteClick, onLoadByIdClick,onLoadClick,onClearClick,onDownLoadCsvClick]) => {
+function initActions([onUpdateClick, onDeleteClick, onLoadClick, onLoadByIdClick, onClearClick,onDownLoadCsvClick ]){
   const
   updateButton = document.getElementById('update'),
   deleteButton = document.getElementById('delete'), 
@@ -19,3 +19,5 @@ module.exports.initActions = ([onUpdateClick, onDeleteClick, onLoadByIdClick,onL
 
   downloadButton.addEventListener('click', onDownLoadCsvClick);
 }
+
+export default initActions;

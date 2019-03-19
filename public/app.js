@@ -1,19 +1,17 @@
-import initActions from './action'
-import initHot from './hot'
+import initActions from './action.js';
+import initHot from './hot.js';
+import initConsole from './console.js';
+import { getDifference, getOnDeleteWarning, copy, swalConfirm, validateIdInitBeforeLoad, isTableEmpty } from './util.js'
 
 const HOT_ATTR_TO_STR = ['_id','name','address','type','serialNumber','phone','qrCode'];
   
-let displayedData = [], onChangeAttrArr = [], consoleOn = false;
+let displayedData = [], onChangeAttrArr = [], hot, consoleOn = false, consoleMsg;
 
 window.onload = () => {
   const actionFuncs = [updateSites, deleteSites, loadAllSites, loadSitesById, clearSites, downloadCsv];
   initActions(actionFuncs);
-  // initConsole();
-  const hot = initHot();
-
-  // hot.onChange .... updatechangedvalues
-  // hot.
-
+  hot = initHot(addToOnChangeArr);
+  consoleMsg = initConsole(consoleOn);
 }
 
 function updateSites(){
@@ -41,6 +39,7 @@ function updateSites(){
 
 function deleteSites(){
   const sitesOnDelete = getOnDeleteFromHot();
+  
   if(sitesOnDelete.length > 0) {
     const warningStr = getOnDeleteWarning(sitesOnDelete);
     swalConfirm(warningStr)
@@ -61,7 +60,7 @@ function deleteSites(){
         });
       } else {
         swal("deletion aborted");
-        restoreDataFromDisplayedData();
+        restoreFromDisplayedData();
       }
     })
   } else {
@@ -79,15 +78,18 @@ function loadAllSites(){
         throw res;
     return res.json();
   })
-  .then( sites => {
-    loadDataToHotAndConsole(sites, 'data loaded');
-  });
+  .then( sites => loadDataToHotAndConsole(sites, 'data loaded'));
 }
 
 function loadSitesById(){
-  const sitesIdToLoad = getIdDifferenceDisplayedAndHot();
-  if( validateIdInitBeforeLoad() ){
+  const hotIdArr = hot.getDataAtCol(0).slice(0,-1).map(id => parseInt(id));
+  const displayedDataIdArr = displayedData.map(site => site._id);
+  const sitesIdToLoad = getDifference(hotIdArr,displayedDataIdArr);
+  
+  if( validateIdInitBeforeLoad(hot.getData()) ){
+  
     if( sitesIdToLoad.length > 0 ) {
+
       const queryStr = `/sites?ids=[${sitesIdToLoad}]`;
       fetch(queryStr, {
         method: 'GET',
@@ -98,18 +100,18 @@ function loadSitesById(){
           throw res;
         return res.json();
       })
-      .then( data => {
-        pushNewDataToHotAndConsole(data.sites, data.idsNotFound)// <-- needs to update server response, add idsFound?
+      .then( data => {// expected: data = { sites: [], idsFound: [], idsNotFound: [] }
+        pushNewDataToHotAndConsole(data.sites, data.idsNotFound)
       });                               
     } else {
-      restoreDataFromDisplayedData();
+      restoreFromDisplayedData();
       consoleMsg(`error: all searched ids apear on table`,'err');
     }
   } 
 }
 
 function clearSites() {
-  if( isTableEmpty() ) {
+  if( isTableEmpty(hot.getData()) ) {
     consoleMsg('no data on table amigo','help');
   } else {
     swalConfirm('changes will not be saved\nwould you like to continue?')
@@ -136,16 +138,25 @@ function downloadCsv(){
   });
 }
 
-function addToOnChangeArr(_id, _attr, oldVal, newVal){
-  if(_attr !== '_id' && newVal !== '' && !isNaN(_id)){
-    const i = onChangeAttrArr.findIndex(obj => obj.id === parseInt(_id));   
-    if( i !== -1 ){
-      onChangeAttrArr[i].attr[_attr] = newVal;
-    } else {
-      let attrOnChange = {};
-      attrOnChange[_attr] = newVal;
-      onChangeAttrArr.push({id: parseInt(_id) , attr : attrOnChange });
-    }
+function addToOnChangeArr(changes){
+  if (changes) {
+    changes.forEach(([row, prop, oldVal, newVal]) => {
+      
+      const onChangeSiteId = parseInt(prop === 'id' ?  oldVal : hot.getData()[row][0]);
+      
+      if(prop !== '_id' && newVal !== '' && !isNaN(onChangeSiteId)) {
+        
+        const i = onChangeAttrArr.findIndex(obj => obj.id === onChangeSiteId);   
+        
+        if( i !== -1 ){
+          onChangeAttrArr[i].attr[prop] = newVal;
+        } else {
+          let attrOnChange = {};
+          attrOnChange[prop] = newVal;
+          onChangeAttrArr.push({ id: onChangeSiteId , attr : attrOnChange });
+        }
+      }   
+    });
   }
 }
 
@@ -193,56 +204,62 @@ function loadDataToHotAndConsole(sites,msg){
   consoleMsg(msg, 'msg');
 }
 
-function getIdDifferenceDisplayedAndHot() {
-  let _difference = new Set(hot.getDataAtCol(0).slice(0,-1).map(id => parseInt(id)));
-  for (let elem of displayedData.map(site => site._id)) 
-      _difference.delete(elem);
-  return copy(Array.from(_difference));
-}
-
-function getOnDeleteWarning(onDeleteArr){
-  let confirmStr = 'you are about to delete:\n';
-  for(let i = 0; i < onDeleteArr.length; i++)
-    confirmStr = confirmStr.concat(`site id: ${onDeleteArr[i].id}-> attributes: ${Object.keys(onDeleteArr[i].attr).map(a => a + ' ')}\n`); 
-  return confirmStr;
-}
-
-function copy(o) {
-    var output, v, key;
-    output = Array.isArray(o) ? [] : {};
-    for (key in o) {
-        v = o[key];
-        output[key] = (typeof v === "object") ? copy(v) : v;
-    }
-    return output;
-}
-
-function swalConfirm(txt){
-  return swal({
-    title: "Are you sure?",
-    text: txt,
-    icon: "warning",
-    buttons: true,
-    dangerMode: true,
-  });
-}
-
 function pushNewDataToHotAndConsole(sitesArr, idsNotFound) {
-  displayedData.push(sitesArr);
+  displayedData.push(...sitesArr);
   hot.loadData(copy(displayedData));
   if( idsNotFound.length === 0 ) consoleMsg('data updated','msg');
   else if( idsNotFound.length === 1 ) consoleMsg(`error: site id ${idsNotFound} not found`,'err');
   else consoleMsg( `error: sites ids' ${idsNotFound} not found`,'err' );
 }
 
-function restoreDataFromDisplayed(){ hot.loadData(copy(displayedData)); }
-
-function validateIdInitBeforeLoad() {
-  if (hot.getData().filter(site => site[0] !== null).length !== 0){
-    consoleMsg('please insert id first','help');
-    return false;
-  }
-  return true;
+function restoreFromDisplayedData(){ 
+  hot.loadData(copy(displayedData)); 
 }
 
-function isTableEmpty(){ return hot.getData().length === 1 && hot.getData()[0].filter(attr => attr !== null).length === 0; }
+//-------------------------------util
+
+// function getDifference(arr1,arr2) {
+//   let difference = new Set(arr1);
+//   for (elem of arr2) 
+//       difference.delete(elem);
+//   return copy(Array.from(difference));
+// }
+
+// function getOnDeleteWarning(onDeleteArr){
+//   let confirmStr = 'you are about to delete:\n';
+//   for(let i = 0; i < onDeleteArr.length; i++)
+//     confirmStr = confirmStr.concat(`site id: ${onDeleteArr[i].id}-> attributes: ${Object.keys(onDeleteArr[i].attr).map(a => a + ' ')}\n`); 
+//   return confirmStr;
+// }
+
+// function copy(o) {
+//     var output, v, key;
+//     output = Array.isArray(o) ? [] : {};
+//     for (key in o) {
+//         v = o[key];
+//         output[key] = (typeof v === "object") ? copy(v) : v;
+//     }
+//     return output;
+// }
+
+// function swalConfirm(txt){
+//   return swal({
+//     title: "Are you sure?",
+//     text: txt,
+//     icon: "warning",
+//     buttons: true,
+//     dangerMode: true,
+//   });
+// }
+
+// function validateIdInitBeforeLoad(table) {
+//   if (table.filter(site => site[0] !== null).length > 0) {
+//     return true;  
+//   }
+//   consoleMsg('please insert id first','help');
+//   return false;
+// }
+
+// function isTableEmpty(table) { 
+//   return table.length === 1 && table[0].filter(attr => attr !== null).length === 0; 
+// }
