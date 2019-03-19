@@ -28,8 +28,8 @@ function updateSites(){
           throw res;
         return res.json();
       })
-      .then(respData => {// <---- decide what to do!
-        console.log('do something with respData');
+      .then(data => {// expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
+        data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${data.idsNotFound} not found`,'err');
       });
     } else {
       swal("data update aborted");
@@ -55,8 +55,8 @@ function deleteSites(){
             throw res;
           return res.json();
         })
-        .then(idsNotFound => {
-          idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${idsNotFound} not found`,'err');
+        .then(data => { // expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
+          data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`error: Ids ${data.idsNotFound} not found`,'err');
         });
       } else {
         swal("deletion aborted");
@@ -78,7 +78,7 @@ function loadAllSites(){
         throw res;
     return res.json();
   })
-  .then( sites => loadDataToHotAndConsole(sites, 'data loaded'));
+  .then( sites => loadDataToHotAndConsole(sites, 'data loaded')); // expected: sites = []
 }
 
 function loadSitesById(){
@@ -141,21 +141,23 @@ function downloadCsv(){
 function addToOnChangeArr(changes){
   if (changes) {
     changes.forEach(([row, prop, oldVal, newVal]) => {
-      
       const onChangeSiteId = parseInt(prop === 'id' ?  oldVal : hot.getData()[row][0]);
       
-      if(prop !== '_id' && newVal !== '' && !isNaN(onChangeSiteId)) {
-        
-        const i = onChangeAttrArr.findIndex(obj => obj.id === onChangeSiteId);   
-        
-        if( i !== -1 ){
-          onChangeAttrArr[i].attr[prop] = newVal;
-        } else {
-          let attrOnChange = {};
-          attrOnChange[prop] = newVal;
-          onChangeAttrArr.push({ id: onChangeSiteId , attr : attrOnChange });
+      if(prop !== '_id'){ 
+        if (newVal !== '' && !isNaN(onChangeSiteId)) {
+          const i = onChangeAttrArr.findIndex(obj => obj.id === onChangeSiteId);   
+          
+          if( i !== -1 ){
+            onChangeAttrArr[i].attr[prop] = newVal;
+          } else {
+            let attrOnChange = {};
+            attrOnChange[prop] = newVal;
+            onChangeAttrArr.push({ id: onChangeSiteId , attr : attrOnChange });
+          }
         }
-      }   
+      } else if (newVal === ''){
+        restoreFromDisplayedData();
+      }  
     });
   }
 }
@@ -214,6 +216,12 @@ function pushNewDataToHotAndConsole(sitesArr, idsNotFound) {
 
 function restoreFromDisplayedData(){ 
   hot.loadData(copy(displayedData)); 
+}
+
+function filterColumns(){
+  let plugin = hot.getPlugin('hiddenColumns');
+  //show === true ? plugin.showColumn(col) : plugin.hideColumn(col);
+  plugin.hideColumn(5);
 }
 
 //-------------------------------util

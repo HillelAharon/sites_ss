@@ -1,7 +1,7 @@
 const Fs = require('fs');
 const Url = require('url');
 const Path = require('path');
-const util = require('./server-util.js');
+const util = require('./server/server-util.js');
 
 module.exports = (db) => {
   return function requestHandler(req, res) {  

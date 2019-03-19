@@ -1,4 +1,4 @@
-function initActions([onUpdateClick, onDeleteClick, onLoadClick, onLoadByIdClick, onClearClick,onDownLoadCsvClick ]){
+function initActions([onUpdateClick, onDeleteClick, onLoadClick, onLoadByIdClick, onClearClick,onFilterClick,onDownLoadCsvClick ]){
   const
   updateButton = document.getElementById('update'),
   deleteButton = document.getElementById('delete'), 
@@ -6,6 +6,7 @@ function initActions([onUpdateClick, onDeleteClick, onLoadClick, onLoadByIdClick
   loadIdButton = document.getElementById('load-id'), 
   downloadButton = document.getElementById('download-csv'),
   clearButton = document.getElementById('clear'); 
+  filterButton = document.getElementById('filter');
         
   updateButton.addEventListener('click', onUpdateClick);
 
@@ -16,6 +17,8 @@ function initActions([onUpdateClick, onDeleteClick, onLoadClick, onLoadByIdClick
   loadSitesButton.addEventListener('click', onLoadClick);
   
   clearButton.addEventListener('click', onClearClick);
+
+  filterButton.addEventListener('click', onFilterClick);
 
   downloadButton.addEventListener('click', onDownLoadCsvClick);
 }

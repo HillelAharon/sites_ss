@@ -2,15 +2,15 @@ const VALID_ATTR_ARR = ['_id','name','address','type','serialNumber','phone','qr
 
 module.exports.sitesOnChangeAutentication = (sitesOnChange) => {
     let res = [];
-    for( site of sitesOnChange )
+    for(let site of sitesOnChange )
     {
-      for( a of Object.keys(site.attr) )
+      for(let a of Object.keys(site.attr) )
       {
         if( VALID_ATTR_ARR.find( x => x === a ) === -1 ) {
           res.push(`error: in site ${site.id}, attribute ${a} is invalid`);
           delete site[attr].a;
         }
-        if( a === 'name' && sites.attr.a === '') {
+        if( a === 'name' && site.attr.a === '') {
           res.push(`error: in site ${site.id}, deleting sites name is forbidden`);
           delete site[attr].a;
         }

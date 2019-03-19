@@ -1,6 +1,6 @@
 const Http = require('http');
 const MongoClient = require('mongodb').MongoClient;
-const MongoSeed = require('./seed');
+const MongoSeed = require('./server/seed');
 const RequestHandler = require('./request-handler');
 
 const MONGO_URL = "mongodb://localhost:27017/";
