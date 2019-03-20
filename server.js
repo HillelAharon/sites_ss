@@ -7,7 +7,7 @@ const MONGO_URL = "mongodb://localhost:27017/";
 
 MongoClient.connect(MONGO_URL, { useNewUrlParser: true }, (err, client) => {
    if (err) throw err;
-   db = client.db("sites");
+   db = client.db("gantzi");
    
    const server = Http.createServer(RequestHandler(db));   
    server.listen(8080, (err) => {

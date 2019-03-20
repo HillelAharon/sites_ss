@@ -1,22 +1,31 @@
-import initActions from './action.js';
+import initActions from './actions.js';
 import initHot from './hot.js';
 import initConsole from './console.js';
 import { getDifference, getOnDeleteWarning, copy, swalConfirm, validateIdInitBeforeLoad, isTableEmpty } from './util.js';
-//import { displayFilter, initCheckBox } from './filterCheckbox.js';
+import initColumnsSelection from './columns-selection.js';
 
 const HOT_ATTR_TO_STR = ['_id','name','address','type','serialNumber','phone','qrCode'];
 
-let displayedData = [], onChangeAttrArr = [], hot, consoleOn = false, consoleMsg;
+let validDataRep = [], onChangeAttrArr = [], hot, consoleMsg;
 
 window.onload = () => {
-  const actionFuncs = [updateSites, deleteSites, loadAllSites, loadSitesById, clearSites, downloadCsv, displayFilter];
-  initActions(actionFuncs);
+  onChangeAttrArr = [];
+  initActions({
+    onUpdateClick, 
+    onDeleteClick, 
+    onLoadByCityIdClick, 
+    onLoadBySiteIdClick, 
+    onClearClick, 
+    onDownLoadCsvClick,
+    onFilterColumnsClick,
+    onSubmitCityIdClick
+  });
   hot = initHot(addToOnChangeArr);
-  consoleMsg = initConsole(consoleOn);
-  initCheckBox(); 
+  consoleMsg = initConsole();
+  initColumnsSelection(onColumnChange);
 }
 
-function updateSites(){
+function onUpdateClick(){
   if(onChangeAttrArr.length === 0){
     consoleMsg('nothing to update', 'help');
     return;
@@ -34,16 +43,14 @@ function updateSites(){
           throw res;
         return res.json();
       })
-      .then(data => {// expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
-        data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`Ids ${data.idsNotFound} not found`,'err');
-      });
+      .then(errors => consoleErrorsAndCheckIdsNotFound(errors));
     } else {
       swal("data update aborted");
     }    
   });
 }
 
-function deleteSites(){
+function onDeleteClick(){
   const sitesOnDelete = getOnDeleteFromHot();
   
   if(sitesOnDelete.length > 0) {
@@ -61,12 +68,10 @@ function deleteSites(){
             throw res;
           return res.json();
         })
-        .then(data => { // expected: data = { idsUpdated: [], idsNotFound: [], attrErr: [] }
-          data.idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`Ids ${data.idsNotFound} not found`,'err');
-        });
+        .then(errors => consoleErrorsAndCheckIdsNotFound(errors));
       } else {
         swal("deletion aborted");
-        restoreFromDisplayedData();
+        restoreFromValidDataRep();
       }
     })
   } else {
@@ -74,9 +79,26 @@ function deleteSites(){
   }
 }
 
-function loadAllSites(){
- // filterColumns();
-  fetch('/sites', {
+function onLoadByCityIdClick(){
+  const cityIdContainer = document.getElementById("cityId-input-container");
+  const cityId = document.getElementById("cityId-input")
+  
+  if(cityIdContainer.classList.contains('hidden')){
+    cityIdContainer.style.display = 'flex';
+    cityIdContainer.classList.remove('hidden');
+  } else {
+    cityIdContainer.style.display = 'none';
+    cityIdContainer.classList.add('hidden');
+  }
+  cityId.value = "";
+}
+
+function onSubmitCityIdClick(){
+  const cityIdInput = document.getElementById("cityId-input");
+  const queryStr = '/sites?cityId='+cityIdInput.value;
+
+  console.log(cityIdInput.value);
+  fetch(queryStr, {
     method:'GET',
     credentials: 'include'
   })
@@ -85,19 +107,25 @@ function loadAllSites(){
         throw res;
     return res.json();
   })
-  .then( sites => loadDataToHotAndConsole(sites, 'data loaded')); // expected: sites = []
+  .then( sites => {// expected: sites = []
+    if(sites.length > 0){
+      loadDataToHot(sites);
+      consoleMsg('sites loaded', 'msg');
+      onLoadByCityIdClick();
+    } else {
+      consoleMsg('no sites matched `'+ cityIdInput.value + '`', 'err');
+      cityIdInput.value = "";
+    }
+  }); 
 }
 
-function loadSitesById(){
-  const hotIdArr = hot.getDataAtCol(0).slice(0,-1).map(id => parseInt(id));
-  const displayedDataIdArr = displayedData.map(site => site._id);
-  const sitesIdToLoad = getDifference(hotIdArr,displayedDataIdArr);
-  
+function onLoadBySiteIdClick(){
+  const sitesIdToLoad = getHotAndValidDataDifference();
   if( validateIdInitBeforeLoad(hot.getData()) ){
   
     if( sitesIdToLoad.length > 0 ) {
 
-      const queryStr = `/sites?ids=[${sitesIdToLoad}]`;
+      const queryStr = `/sites?_id=[${sitesIdToLoad}]`;
       fetch(queryStr, {
         method: 'GET',
         credentials: 'include'
@@ -107,30 +135,36 @@ function loadSitesById(){
           throw res;
         return res.json();
       })
-      .then( data => {// expected: data = { sites: [], idsFound: [], idsNotFound: [] }
-        pushNewDataToHotAndConsole(data.sites, data.idsNotFound)
-      });                               
+      .then( sites => {// expected: sites = []
+        const idsNotFound = getDifference(sitesIdToLoad, sites.map(site => site._id));
+        validDataRep.push(...sites);
+        hot.loadData(copy(validDataRep));
+        if( idsNotFound.length === 0 ) consoleMsg('data updated','msg');
+        else if( idsNotFound.length === 1 ) consoleMsg(`site id ${idsNotFound} not found`,'err');
+        else consoleMsg( `sites ids ${idsNotFound} not found`,'err' );
+      });
     } else {
-      restoreFromDisplayedData();
+      restoreFromValidDataRep();
       consoleMsg(`all searched ids apear on table`,'err');
     }
   } 
 }
 
-function clearSites() {
+function onClearClick() {
   if( isTableEmpty(hot.getData()) ) {
     consoleMsg('no data on table amigo','help');
   } else {
     swalConfirm('changes will not be saved\nwould you like to continue?')
     .then((willClear) => {
       if (willClear) {
-        loadDataToHotAndConsole([],'data cleared')
+        loadDataToHot([]);
+        consoleMsg('data cleared', 'msg');
       }       
     });
   }
 }
 
-function downloadCsv(){
+function onDownLoadCsvClick(){
   hot.getPlugin('exportFile').downloadFile('csv', {
     bom: false,
     columnDelimiter: ',',
@@ -143,6 +177,21 @@ function downloadCsv(){
     rowDelimiter: '\r\n',
     rowHeaders: true
   });
+}
+
+function onFilterColumnsClick() {
+  const filtersContainer = document.getElementById("filter-container");
+  const filterButton = document.getElementById('filter-columns');
+ 
+  if(filtersContainer.classList.contains('hidden')){
+    filtersContainer.style.display = 'flex';
+    filtersContainer.classList.remove('hidden');
+    filterButton.innerHTML = 'hide filters';
+  } else {
+    filtersContainer.style.display = 'none';
+    filtersContainer.classList.add('hidden');
+    filterButton.innerHTML = 'show filters';
+  }
 }
 
 function addToOnChangeArr(changes) {
@@ -170,7 +219,7 @@ function addToOnChangeArr(changes) {
         consoleErr = true;
       }
     });
-    if(consoleErr) consoleMsg('attribute deleted manually will not be updated', 'err');
+    if(consoleErr) consoleMsg('attributes deleted manually will not be updated', 'err');
   }
 }
 
@@ -200,7 +249,7 @@ function getOnDeleteFromHot(){
               onDelete.push({id: rowId , attr : attrOnDelete });
             }
           } else {
-            consoleMsg('`Name` is required if added','err');
+            consoleMsg('`Name` is require if added','err');
           }
         } 
       }
@@ -209,55 +258,31 @@ function getOnDeleteFromHot(){
   }
 }
 
-function loadDataToHotAndConsole(sites,msg){
-  hot.loadData(sites);
-  displayedData = copy(sites);
-  onChangeAttrArr = [];
-  if( sites.length > 0 ) displayedData.pop(); // <--- y comes back with undefined?
-  consoleMsg(msg, 'msg');
+function loadDataToHot(sites){
+    hot.loadData(sites);
+    validDataRep = copy(sites);
+    onChangeAttrArr = [];
+    if( sites.length > 0 ) validDataRep.pop(); // <--- y comes back with undefined?
 }
 
-function pushNewDataToHotAndConsole(sitesArr, idsNotFound) {
-  displayedData.push(...sitesArr);
-  hot.loadData(copy(displayedData));
-  if( idsNotFound.length === 0 ) consoleMsg('data updated','msg');
-  else if( idsNotFound.length === 1 ) consoleMsg(`site id ${idsNotFound} not found`,'err');
-  else consoleMsg( `sites ids' ${idsNotFound} not found`,'err' );
+function restoreFromValidDataRep(){ 
+  hot.loadData(copy(validDataRep)); 
 }
 
-function restoreFromDisplayedData(){ 
-  hot.loadData(copy(displayedData)); 
+function consoleErrorsAndCheckIdsNotFound(errors){
+  const idsNotFound = getHotAndValidDataDifference();
+  idsNotFound.length === 0 ? consoleMsg('data updated','msg') : consoleMsg(`Ids ${data.idsNotFound} not found`,'err');
+  for ( let err of errors ) consoleMsg(err,'err');
 }
 
-
-//--->checkbox
-
-function initCheckBox() {
-  const el = document.getElementById('columns'), 
-    columns = el.getElementsByTagName('input');
-  
-  for (let i = 0 ; i < columns.length ; i++) 
-      columns[i].addEventListener('click', toggleColumn);
+function getHotAndValidDataDifference(){
+  const hotIdArr = hot.getDataAtCol(0).slice(0,-1);
+  const validDataRepIdArr = validDataRep.map(site => site._id);
+  return getDifference(hotIdArr,validDataRepIdArr);
 }
 
-function displayFilter() {
-  const filtersContainer = document.getElementById("filter-container");
-  const filterButton = document.getElementById('filter-columns');
- 
-  if(filtersContainer.classList.contains('hidden')){
-    filtersContainer.style.display = 'flex';
-    filtersContainer.classList.remove('hidden');
-    filterButton.innerHTML = 'hide filters';
-  } else {
-    filtersContainer.style.display = 'none';
-    filtersContainer.classList.add('hidden');
-    filterButton.innerHTML = 'show filters';
-  }
-}
-
-function toggleColumn(){
-  const columnIndex = parseInt(this.value);
+function onColumnChange(columnIndex, checked){  
   const hiddenColumnsPlugin = hot.getPlugin('hiddenColumns');
-  this.checked ? hiddenColumnsPlugin.showColumn(columnIndex) : hiddenColumnsPlugin.hideColumn(columnIndex);
+  checked ? hiddenColumnsPlugin.showColumn(columnIndex) : hiddenColumnsPlugin.hideColumn(columnIndex);
   hot.render();
 }

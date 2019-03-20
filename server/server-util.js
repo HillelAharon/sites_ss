@@ -1,4 +1,3 @@
-const VALID_ATTR_ARR = ['_id','name','address','type','serialNumber','phone','qrCode'];
 
 module.exports.sitesOnChangeAutentication = (sitesOnChange) => {
     let res = [];

@@ -20,7 +20,6 @@ function initHot(addToOnChangeArr) {
       outsideClickDeselects: false,
       selectionMode: 'multiple',
       minSpareRows: 1,
-      contextMenu: true,
       hiddenColumns: true,
       showColumns: true,
       undo: true,
@@ -29,6 +28,7 @@ function initHot(addToOnChangeArr) {
       },
       afterChange: (changes) => { addToOnChangeArr(changes); }
   });
+
   hot.updateSettings({
     cells: function (row, col, prop) {
       var cellProperties = {};

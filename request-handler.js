@@ -1,12 +1,14 @@
 const Fs = require('fs');
 const Url = require('url');
 const Path = require('path');
-const util = require('./server/server-util.js');
+
+const VALID_ATTR_ARR = ['_id','name','address','type','serialNumber','phone','qrCode'];
+const IRRELEVANT_ATTR = ['cityId', 'companyId', 'createdBy', 'inspectionInterval', ' inspectorIds', 'operatorIds', 'tasks', 'isBeingInspected', 'createdAt', 'isPublicToOperators', 'updatedAt', 'updatedBy'];
 
 module.exports = (db) => {
   return function requestHandler(req, res) {  
     const method = req.method;
-    const pathname = Url.parse(req.url).pathname;
+    const {pathname, search} = Url.parse(req.url);
 
     if (method === 'GET' && pathname === '/') {
       Fs.readFile(Path.join(__dirname, 'index.html'), (err, data) => {
@@ -21,29 +23,23 @@ module.exports = (db) => {
       });
       return;
     }
+    
+    if (method === 'GET' && pathname === '/sites') {
+      const query = {};
+      const params = search ? search.slice(1).split('&').reduce((params, string) => {
+        const [key, value] = string.split('=');
+        return {
+          ...params,
+          [key]: value.startsWith('[') ? value.split('[')[1].split(']')[0].split(',') : [value]
+        }
+      }, {}) : {} ;
 
-     // TODO: query by cityId
-    if (method === 'GET' && pathname.match(/sites/)) {
-      if( req.url.match(/ids/) ) {
-        let respData = {},
-        idsOnLoad =  req.url.split('[')[1]
-                            .split(']')[0]
-                            .split(',')
-                            .map(idStr => parseInt(idStr));
+      if (params._id) query._id = { $in: params._id };
 
-        db.collection("sites").find( { _id: { $in: idsOnLoad } } ).toArray((err, sites) => {
-          if (err) throw err;
-          respData.sites = sites; 
-          respData.idsFound = idsOnLoad.filter(id => sites.map(site=>site._id).includes(id));
-          respData.idsNotFound = idsOnLoad.filter(id => !sites.map(site=>site._id).includes(id));
-          
-          res.writeHead(200, {'Content-Type': 'application/json'});	
-          res.write(JSON.stringify(respData));
-          res.end();
-        });
-        return;
-      }
-      db.collection("sites").find({}).toArray((err, sites) => {
+      if (params.cityId) query.cityId = { $in: params.cityId };
+
+      db.collection("sites").find(query).toArray((err, sites) => {
+        sites.forEach(site => trimSite(site));
         if (err) throw err;
         res.writeHead(200, { 'Content-Type': 'application/json' });	
         res.write(JSON.stringify(sites));
@@ -58,16 +54,11 @@ module.exports = (db) => {
       req.on('data', chunk => data.push(chunk));  
       
       req.on('end', () => {
-        const sitesOnChange = JSON.parse(Buffer.concat(data).toString()); 
-        let respData = {
-          idsUpdated: [], 
-          idsNotFound: [], 
-          attrErr: []
-        };
-
-        respData.attrErr = util.sitesOnChangeAutentication(sitesOnChange);
+        let errors = [];
+        const sitesAttributeToUpdate = JSON.parse(Buffer.concat(data).toString()); 
+        errors.push(...attributesUpdateValidation(sitesAttributeToUpdate));
         
-        const sitesUpdating = sitesOnChange.map(site => {
+        const sitesUpdating = sitesAttributeToUpdate.map(site => {
           try {
             return db.collection("sites").updateOne({ "_id" : site.id }, { $set: site.attr }); 
           } catch (e) {
@@ -76,21 +67,22 @@ module.exports = (db) => {
         })
         
         Promise.all(sitesUpdating).then(results => {
-          let currIndex = 0
-          for ( r of results ) {
-            const siteId = sitesOnChange[currIndex].id;
-            util.checkAndUpdateRespData(r, siteId, respData);
-            ++currIndex;
-          }
+          for (let i = 0; i < results.length; i++) {
+            const siteId = sitesAttributeToUpdate[i].id;
+            if ( results[i] === 0 ) {
+              const errStr = `error: in site ${siteId} database connection occured`;
+              errors.push(errStr)
+            }        
+          }          
           res.writeHead(200, { 'Content-Type': 'application/json' });	
-          res.write(JSON.stringify(respData));
+          res.write(JSON.stringify(errors));
           res.end();                  
         });
       });
       return;
     } 
   
-    if (method === 'GET' &&  pathname.match(/(css$|js$|png$)/))  {
+    if (method === 'GET' &&  pathname.match(/.(css|js|png)$/))  {
       Fs.readFile(Path.join(__dirname, 'public', pathname), (err, data) => {
         if (err){
             console.log(err);
@@ -111,6 +103,29 @@ module.exports = (db) => {
 }
 
 
+function attributesUpdateValidation(sitesAttributeToUpdate){
+  let res = [];
+  for(let site of sitesAttributeToUpdate )
+  {
+    for(let a of Object.keys(site.attr) )
+    {
+      if( VALID_ATTR_ARR.find( x => x === a ) === -1 ) {
+        res.push(`in site ${site.id}, attribute ${a} is invalid`);
+        delete site[a];
+      }
+      if( a === 'name' && site.attr.a === '') {
+        res.push(`in site ${site.id}, deleting sites name is forbidden`);
+        delete site[a];
+      }
+    }
+    return res;
+  }
+}
+
+function trimSite(site){
+  for(let attr of IRRELEVANT_ATTR) 
+    delete site[attr];
+}
 //missions accomplished?
 // TODO: add validation 
 // TODO: sitesUpdating is not an array of promises
