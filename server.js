@@ -1,6 +1,5 @@
 const Http = require('http');
 const MongoClient = require('mongodb').MongoClient;
-const MongoSeed = require('./server/seed');
 const RequestHandler = require('./request-handler');
 
 const MONGO_URL = "mongodb://localhost:27017/";
@@ -18,5 +17,3 @@ MongoClient.connect(MONGO_URL, { useNewUrlParser: true }, (err, client) => {
       console.log('Server start on port 8080');
    });
 });
-
-MongoSeed();

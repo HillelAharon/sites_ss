@@ -1,5 +1,3 @@
-//import { timingSafeEqual } from "crypto";
-
 function initActions({ onUpdateClick, onDeleteClick, onLoadByCityIdClick, onLoadBySiteIdClick, onClearClick, onDownLoadCsvClick ,onFilterColumnsClick ,onSubmitCityIdClick}){
   const
   updateButton = document.getElementById('update'),

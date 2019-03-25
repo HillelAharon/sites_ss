@@ -4,6 +4,10 @@ body{
     background-size: 100%;
 }
 
+span{
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+
 #base-container {
     display: flex;
     flex-direction: column;
@@ -16,15 +20,83 @@ body{
     height: 80vh;
     overflow: hidden;
 }
+
+/* -------------------buttons----------------- */
 #button-container {
     display: flex;       
 }
+
+.button {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: larger;
+    flex-grow: 1;
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+
+#delete{
+    background-color: rgb(196, 116, 126);
+}
+
+#update{
+    background-color: rgb(143, 140, 196);
+}
+
+#download-csv {
+    color: slateblue;
+}
+/* -------------------console----------------- */
 #console-container {
     display: flex;
     border: 2px solid rgb(168, 168, 172);
     background-color: rgb(214, 209, 209);
 }
+#console{
+    font-size: larger;
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+#console-label {
+    border-right: 2px solid rgb(168, 168, 172);
+    font-size: larger;        
+    padding-right: 6px;
+    padding-left: 6px;
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+    color: rgb(71, 71, 71);
+}
+/* -------------------filter------------------ */
 
+#filter-container{
+    display: none;
+    justify-content: space-around;
+    border: 2px solid rgb(168, 168, 172);
+    background-color: rgb(214, 209, 209);
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+
+.filter-item{
+    flex-grow: 1;
+}
+
+/* --------------------popup------------------ */
+.swal-modal {
+    background-color:  rgb(184, 184, 189);
+    border: 3px solid rgb(231, 219, 219);
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+    max-height: 70%;
+    max-width: 60%;
+    overflow: auto;
+}
+
+.swal-button--confirm{
+    background-color: rgb(143, 140, 196);
+}
+
+.swal-button--confirm.swal-button--danger{
+    background-color: rgb(196, 116, 126);
+    size: 150%;
+} 
+
+/* -----------------cityIdInput--------------- */
 #cityId-input-container {
     display: none;
     border: 2px solid rgb(168, 168, 172);
@@ -51,75 +123,6 @@ body{
     font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
     color: rgb(71, 71, 71);
 }
-
-.button {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    font-size: larger;
-    flex-grow: 1;
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-#console{
-    font-size: larger;
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-#console-label {
-    border-right: 2px solid rgb(168, 168, 172);
-    font-size: larger;        
-    padding-right: 6px;
-    padding-left: 6px;
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-    color: rgb(71, 71, 71);
-}
-
-#delete{
-    background-color: rgb(196, 116, 126);
-}
-
-#update{
-    background-color: rgb(143, 140, 196);
-}
-
-span{
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-
 textarea{
     font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-
-.swal-modal {
-    background-color:  rgb(168, 168, 172);
-    border: 3px solid rgb(231, 219, 219);
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-
-.swal-button--confirm{
-    background-color: rgb(143, 140, 196);
-}
-
-.swal-button--confirm.swal-button--danger{
-    background-color: rgb(196, 116, 126);
-    size: 150%;
-} 
-
-#a{
-    background-color: rgb(179, 58, 72);
-    background-color: rgb(72, 67, 172);
-}
-
-#filter-container{
-    display: none;
-    justify-content: space-around;
-    border: 2px solid rgb(168, 168, 172);
-    background-color: rgb(214, 209, 209);
-    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-
-.filter-item{
-    flex-grow: 1;
-}
-
-#download-csv {
-    color: slateblue;
 }

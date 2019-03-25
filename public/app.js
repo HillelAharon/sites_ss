@@ -6,7 +6,7 @@ import initColumnsSelection from './columns-selection.js';
 
 const HOT_ATTR_TO_STR = ['_id','name','address','type','serialNumber','phone','qrCode'];
 
-let validDataRep = [], onChangeAttrArr = [], hot, consoleMsg;
+let validDataRep = [], onChangeAttrArr = [], hot, consoleMsg, safeDelete = false;
 
 window.onload = () => {
   onChangeAttrArr = [];
@@ -30,6 +30,7 @@ function onUpdateClick(){
     consoleMsg('nothing to update', 'help');
     return;
   }
+  console.log(onChangeAttrArr);
   swalConfirm('You are about to change the database')
   .then((willUpdate) => {
     if (willUpdate) {
@@ -52,6 +53,7 @@ function onUpdateClick(){
 
 function onDeleteClick(){
   const sitesOnDelete = getOnDeleteFromHot();
+  console.log(sitesOnDelete);
   
   if(sitesOnDelete.length > 0) {
     const warningStr = getOnDeleteWarning(sitesOnDelete);
@@ -196,12 +198,11 @@ function onFilterColumnsClick() {
 
 function addToOnChangeArr(changes) {
   if (changes) {
-    let consoleErr = false;
+    let manualDeleteTryErr = false;
     changes.forEach(([row, prop, oldVal, newVal]) => {
-      const onChangeSiteId = parseInt(prop === 'id' ?  oldVal : hot.getData()[row][0]);
-      
+      const onChangeSiteId = prop === 'id' ?  oldVal : hot.getData()[row][0];
       if(prop !== '_id' && !(oldVal !== '' && newVal === '')){ 
-        if (newVal !== '' && !isNaN(onChangeSiteId)) {
+        if (newVal !== '' && onChangeSiteId) {
           const i = onChangeAttrArr.findIndex(obj => obj.id === onChangeSiteId);   
           
           if( i !== -1 ){
@@ -215,15 +216,17 @@ function addToOnChangeArr(changes) {
       } else if (prop === '_id' && newVal === ''){
         hot.setDataAtCell(row, 0, oldVal);
       }
-      if (oldVal !== '' && newVal === ''){
-        consoleErr = true;
+      if (oldVal !== '' && newVal === '' && !safeDelete){
+        manualDeleteTryErr = true;
       }
     });
-    if(consoleErr) consoleMsg('attributes deleted manually will not be updated', 'err');
+    if(manualDeleteTryErr) 
+      consoleMsg('attributes deleted manually will not be updated', 'err');
   }
 }
 
 function getOnDeleteFromHot(){
+  safeDelete = true;
   const selected = hot.getSelected();
   let onDelete = [];
   for (let index = 0; index < selected.length; index++) {
@@ -235,10 +238,10 @@ function getOnDeleteFromHot(){
 
     for (let rowIndex = startRow; rowIndex <= endRow; rowIndex++) {
       for (let columnIndex = startCol; columnIndex <= endCol; columnIndex++) {
-        let rowId = parseInt(hot.getSourceDataAtCell(rowIndex, 0));
+        let rowId = hot.getSourceDataAtCell(rowIndex, 0);
 
-        if(rowId >= 0) {
-          if(HOT_ATTR_TO_STR[columnIndex] !== 'name') { 
+        if(rowId) {
+          if(HOT_ATTR_TO_STR[columnIndex] !== 'name' && HOT_ATTR_TO_STR[columnIndex] !== '_id') { 
             hot.setDataAtCell(rowIndex, columnIndex, '');
             const i = onDelete.findIndex(obj => obj.id === rowId);   
             if( i !== -1 ) {
@@ -249,11 +252,15 @@ function getOnDeleteFromHot(){
               onDelete.push({id: rowId , attr : attrOnDelete });
             }
           } else {
-            consoleMsg('`Name` is require if added','err');
+            if(HOT_ATTR_TO_STR[columnIndex] === 'name')
+              consoleMsg('`Name` is require if added','err');
+            else
+              consoleMsg('`Id` attribute is immutable','err');
           }
         } 
       }
     }
+    safeDelete = false;
     return onDelete;
   }
 }

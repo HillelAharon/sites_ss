@@ -9,7 +9,7 @@ function getDifference(arr1,arr2) {
 function getOnDeleteWarning(onDeleteArr){
   let confirmStr = 'you are about to delete:\n';
   for(let i = 0; i < onDeleteArr.length; i++)
-    confirmStr = confirmStr.concat(`site id: ${onDeleteArr[i].id}-> attributes: ${Object.keys(onDeleteArr[i].attr).map(a => a + ' ')}\n`); 
+    confirmStr = confirmStr.concat(`${onDeleteArr[i].id} -> ${Object.keys(onDeleteArr[i].attr).map(a => a + ' ')}\n`); 
   return confirmStr;
 }
 
